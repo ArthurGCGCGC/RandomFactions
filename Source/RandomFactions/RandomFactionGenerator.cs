@@ -167,6 +167,7 @@ public class RandomFactionGenerator
 
         if (factionDef != null)
         {
+            Messages.Message("RaFa.baseLineReplaced".Translate(randomXenotypeDef.label), MessageTypeDefOf.NeutralEvent);
             return factionDef;
         }
 

@@ -6,4 +6,5 @@
   <RaFa.xenotypePercentTT>If Biotech DLC is detected, then random factions will substitute baseliners for xenotypes this percent of the time (default 15%)</RaFa.xenotypePercentTT>
   <RaFa.reorganiseFactions>Re-organise Factions</RaFa.reorganiseFactions>
   <RaFa.reorganiseFactionsTT>Removes all non-random factions from the starting faction list in the New World screen during New Colony creation.</RaFa.reorganiseFactionsTT>
+  <RaFa.baseLineReplaced>"Baseliner faction updated to use the "{0}" xenotype"</RaFa.baseLineReplaced>
 </LanguageData>

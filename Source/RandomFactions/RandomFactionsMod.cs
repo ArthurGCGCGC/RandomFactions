@@ -43,16 +43,27 @@ public class RandomFactionsMod : ModBase
 {
     public const string RandomCategoryName = "Random";
     private const string XenopatchCategoryName = "Xenopatch";
+
+    private static readonly HashSet<string> ignoredFactions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "Insect", //Usually wouldn't be required, but it's here for compatibility with 'Vanilla Factions Expanded - Insectoids 2', which unhides this faction
+        "Empire", //Royalty
+        "Salvagers", //Odyssey
+        "TradersGuild" //Odyssey
+    };
+
     private readonly Dictionary<string, FactionDef> patchedXenotypeFactions = new();
+
     private readonly Dictionary<FactionDef, int> randCountRecord = new();
-    private readonly Dictionary<FactionDef, int> zeroCountRecord = new();
-    private SettingHandle<bool> allowDuplicates;
-    private SettingHandle<bool> removeOtherFactions;
-    private SettingHandle<int> xenoPercentHandle;
 
     private readonly Lazy<List<XenotypeDef>> violenceCapableNonBaselineXenotypes = new(() =>
         GetViolenceCapableNonBaselineXenotypes()
             .ToList());
+
+    private readonly Dictionary<FactionDef, int> zeroCountRecord = new();
+    private SettingHandle<bool> allowDuplicates;
+    private SettingHandle<bool> removeOtherFactions;
+    private SettingHandle<int> xenoPercentHandle;
 
     public RandomFactionsMod()
     {
@@ -149,7 +160,7 @@ Since A17 it no longer matters where you initialize your settings handles, since
             "PercentXenotype",
             "RaFa.xenotypePercent".Translate(),
             "RaFa.xenotypePercentTT".Translate(),
-            15,
+            40,
             Validators.IntRangeValidator(0, 100));
         //xenoPercentHandle.ValueChanged += handle => {
         //    Logger.Message("Xenotype changed to " + xenoPercentHandle.Value);
@@ -328,34 +339,22 @@ Note, that the setting changed may belong to another mod.*/
 
     private void ZeroCountFactionDefs()
     {
-        /*
-        var hasVFEMechanoids = false;
-        var hasVFEInsects = false;
-        bool hasVFEMechanoids = ModLister.GetActiveModWithIdentifier("OskarPotocki.VFE.Mechanoid") != null;
-        foreach (var m in Verse.ModLister.AllInstalledMods)
-        {
-            if (m.PackageId.EqualsIgnoreCase("OskarPotocki.VFE.Mechanoid")) { hasVFEMechanoids = true; }
-            if (m.PackageId.EqualsIgnoreCase("OskarPotocki.VFE.Insectoid")) { hasVFEInsects = true; }
-        }*/
         foreach (var def in DefDatabase<FactionDef>.AllDefs)
         {
+            if (!RandomCategoryName.EqualsIgnoreCase(def.categoryTag) && def.configurationListOrderPriority < 5)
+            {
+                def.configurationListOrderPriority = Math.Max(def.configurationListOrderPriority + 5, 5);
+            }
+
             if (def.hidden || def.isPlayer || RandomCategoryName.EqualsIgnoreCase(def.categoryTag)
-                || "Empire".EqualsIgnoreCase(def.defName))
+                || ignoredFactions.Contains(def.defName)
+               )
             {
                 continue;
             }
 
             zeroCountRecord[def] = def.startingCountAtWorldCreation; // save for later undo operation
             def.startingCountAtWorldCreation = 0;
-            /*
-            else if ("Mechanoid".EqualsIgnoreCase(def.defName) && hasVFEMechanoids)
-            {
-                def.startingCountAtWorldCreation = 0;
-            }
-            else if ("Insect".EqualsIgnoreCase(def.defName) && hasVFEInsects)
-            {
-                def.startingCountAtWorldCreation = 0;
-            }*/
         }
 
         foreach (var def in randCountRecord.Keys)
@@ -373,13 +372,9 @@ Note, that the setting changed may belong to another mod.*/
             def.startingCountAtWorldCreation = val;
         }
 
-        foreach (var def in DefDatabase<FactionDef>.AllDefs)
+        foreach (var def in DefDatabase<FactionDef>.AllDefs.Where(x =>
+                     RandomCategoryName.EqualsIgnoreCase(x.categoryTag)))
         {
-            if (!RandomCategoryName.EqualsIgnoreCase(def.categoryTag))
-            {
-                continue;
-            }
-
             randCountRecord[def] = def.startingCountAtWorldCreation;
             def.startingCountAtWorldCreation = 0;
         }
@@ -468,15 +463,6 @@ This is only called after the game has started, not on the "select landing spot"
             else if (faction.def.defName.EqualsIgnoreCase("RF_RandomTradeFaction"))
             {
                 factionGenerator.ReplaceWithRandomNonHiddenTraderFaction(faction, allowDuplicates.Value);
-            }
-            else if (faction.def.defName.EqualsIgnoreCase("RF_RandomMechanoid"))
-            {
-                factionGenerator.ReplaceWithRandomNamedFaction(faction, allowDuplicates.Value, "Mechanoid",
-                    "VFE_Mechanoid");
-            }
-            else if (faction.def.defName.EqualsIgnoreCase("RF_RandomInsectoid"))
-            {
-                factionGenerator.ReplaceWithRandomNamedFaction(faction, allowDuplicates.Value, "Insect", "VFEI_Insect");
             }
             else
             {
