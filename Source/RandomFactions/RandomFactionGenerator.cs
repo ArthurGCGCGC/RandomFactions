@@ -114,12 +114,9 @@ public class RandomFactionGenerator
         modLogger.Message(
             $"Replacing faction {oldFaction.Name} ({oldFaction.def.defName}) with faction {newFaction.Name} ({newFaction.def.defName})");
 
-        foreach (var stl in Find.WorldObjects.Settlements)
+        foreach (var stl in Find.WorldObjects.Settlements.Where(stl => stl.Faction.Equals(oldFaction)))
         {
-            if (stl.Faction.Equals(oldFaction))
-            {
-                stl.SetFaction(newFaction);
-            }
+            stl.SetFaction(newFaction);
         }
 
         oldFaction.defeated = true;
@@ -342,7 +339,8 @@ public class RandomFactionGenerator
 
     private static FactionRelationKind GetDefaultRelationKind(FactionDef def)
     {
-        if (def.permanentEnemy || def.naturalEnemy)
+        if (def.permanentEnemy || def.naturalEnemy || def.permanentEnemyToEveryoneExceptPlayer ||
+            def.permanentEnemyToEveryoneExcept?.Count > 0)
         {
             return FactionRelationKind.Hostile;
         }
