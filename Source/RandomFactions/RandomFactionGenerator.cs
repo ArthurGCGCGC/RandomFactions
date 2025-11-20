@@ -340,7 +340,7 @@ public class RandomFactionGenerator
     private static FactionRelationKind GetDefaultRelationKind(FactionDef def)
     {
         if (def.permanentEnemy || def.naturalEnemy || def.permanentEnemyToEveryoneExceptPlayer ||
-            def.permanentEnemyToEveryoneExcept?.Count > 0)
+            def.permanentEnemyToEveryoneExcept?.Count > 0 || def.defName == "Insect")
         {
             return FactionRelationKind.Hostile;
         }
