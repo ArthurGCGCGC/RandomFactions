@@ -42,7 +42,7 @@ namespace RandomFactions;
 public class RandomFactionsMod : ModBase
 {
     public const string RandomCategoryName = "Random";
-        private const string XenopatchCategoryName = "Xenopatch";
+    private const string XenopatchCategoryName = "Xenopatch";
 
     private static readonly HashSet<string> ignoredFactions = new(StringComparer.OrdinalIgnoreCase)
     {
