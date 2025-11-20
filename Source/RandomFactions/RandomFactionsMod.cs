@@ -42,7 +42,7 @@ namespace RandomFactions;
 public class RandomFactionsMod : ModBase
 {
     public const string RandomCategoryName = "Random";
-    private const string XenopatchCategoryName = "Xenopatch";
+        private const string XenopatchCategoryName = "Xenopatch";
 
     private static readonly HashSet<string> ignoredFactions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -56,9 +56,8 @@ public class RandomFactionsMod : ModBase
 
     private readonly Dictionary<FactionDef, int> randCountRecord = new();
 
-    private readonly Lazy<List<XenotypeDef>> violenceCapableNonBaselineXenotypes = new(() =>
-        GetViolenceCapableNonBaselineXenotypes()
-            .ToList());
+    private readonly Lazy<List<XenotypeDef>> violenceCapableNonBaselineXenotypes =
+        new(GetViolenceCapableNonBaselineXenotypes);
 
     private readonly Dictionary<FactionDef, int> zeroCountRecord = new();
     private SettingHandle<bool> allowDuplicates;
@@ -298,10 +297,10 @@ Since A17 it no longer matters where you initialize your settings handles, since
     private static FactionDef CloneDef(FactionDef def)
     {
         // use reflection magic to do a 1-deep clone of the def
-        var cpy = new FactionDef();
-        ReflectionCopy(def, cpy);
-        cpy.debugRandomId = (ushort)(def.debugRandomId + 1);
-        return cpy;
+        var factionCopy = new FactionDef();
+        ReflectionCopy(def, factionCopy);
+        factionCopy.debugRandomId = (ushort)(def.debugRandomId + 1);
+        return factionCopy;
     }
 
     private static void ReflectionCopy(object a, object b)
@@ -444,7 +443,7 @@ This is only called after the game has started, not on the "select landing spot"
             hasBiotech, violenceCapableNonBaselineXenotypes.Value, Logger);
 
         var factionReplacementList = Find.FactionManager.AllFactions.Where(faction =>
-            faction.def.categoryTag.EqualsIgnoreCase(RandomCategoryName) && !faction.defeated).ToList();
+            faction.def.categoryTag == RandomCategoryName && !faction.defeated).ToList();
 
         foreach (var faction in factionReplacementList)
         {
@@ -472,6 +471,23 @@ This is only called after the game has started, not on the "select landing spot"
         }
 
         Logger.Message($"...Random faction generation complete! Replaced {factionReplacementList.Count} factions.");
+
+        MarkUnusedGeneratedFactionsForRemoval();
+    }
+
+    private static void MarkUnusedGeneratedFactionsForRemoval()
+    {
+        var factionsToRemove = Find.FactionManager.AllFactions
+            .Where(f =>
+                f.def.categoryTag == RandomCategoryName ||
+                (f.def.categoryTag == XenopatchCategoryName &&
+                 f.defeated && f.hidden == true));
+
+        foreach (var faction in factionsToRemove)
+        {
+            faction.temporary = true;
+            Find.FactionManager.Notify_PawnLeftFaction(faction);
+        }
     }
 
 
