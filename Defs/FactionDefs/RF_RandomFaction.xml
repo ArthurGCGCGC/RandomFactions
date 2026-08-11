@@ -232,40 +232,4 @@
     <configurationListOrderPriority>2</configurationListOrderPriority>
     <startingCountAtWorldCreation>2</startingCountAtWorldCreation>
   </FactionDef>
-  <FactionDef ParentName="RF_RandomFactionBase" MayRequire="OskarPotocki.VFE.Mechanoid">
-    <defName>RF_RandomMechanoid</defName>
-    <label>random mechanoid faction</label>
-    <description>If you have VFE Mechanoids mod installed, this faction will randomly be either the mechanoid hive or the mechanoid swarm.</description>
-    <factionIconPath>World/WorldObjects/RandFaction_Expanding/RandMech</factionIconPath>
-    <colorSpectrum>
-      <li>(0.5, 0.5, 0.5)</li>
-      <li>(0.3, 0.3, 0.3)</li>
-      <li>(0.7, 0.7, 0.7)</li>
-    </colorSpectrum>
-    <configurationListOrderPriority>5</configurationListOrderPriority>
-    <classicIdeo>true</classicIdeo>
-    <startingCountAtWorldCreation>0</startingCountAtWorldCreation>
-    <requiredCountAtGameStart>1</requiredCountAtGameStart>
-    <maxConfigurableAtWorldCreation>1</maxConfigurableAtWorldCreation>
-    <maxCountAtGameStart>1</maxCountAtGameStart>
-    <settlementGenerationWeight>0</settlementGenerationWeight>
-  </FactionDef>
-  <FactionDef ParentName="RF_RandomFactionBase" MayRequire="OskarPotocki.VFE.Insectoid">
-    <defName>RF_RandomInsectoid</defName>
-    <label>random insectoid faction</label>
-    <description>If you have VFE Insectoids mod installed, this faction will randomly be either the insect hive or the insect geneline.</description>
-    <factionIconPath>World/WorldObjects/RandFaction_Expanding/RandBug</factionIconPath>
-    <colorSpectrum>
-      <li>(0.6, 0.45, 0.3)</li>
-      <li>(0.4, 0.3, 0.2)</li>
-      <li>(0.4, 0.45, 0.2)</li>
-    </colorSpectrum>
-    <configurationListOrderPriority>6</configurationListOrderPriority>
-    <classicIdeo>true</classicIdeo>
-    <startingCountAtWorldCreation>0</startingCountAtWorldCreation>
-    <requiredCountAtGameStart>1</requiredCountAtGameStart>
-    <maxConfigurableAtWorldCreation>1</maxConfigurableAtWorldCreation>
-    <maxCountAtGameStart>1</maxCountAtGameStart>
-    <settlementGenerationWeight>0</settlementGenerationWeight>
-  </FactionDef>
 </Defs>

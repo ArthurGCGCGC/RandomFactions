@@ -60,7 +60,7 @@ For example, if you have both [VFE Vikings](https://steamcommunity.com/sharedfil
 ### Mod Options
 You can change the settings for Random Factions in the mod options menu (Options -> Mod Options -> Random Factions)
 * Re-organise Factions: if active, then when you create a new colony, the world faction screen wil be pre-populated with a list of random factions instead of all factions
-* % Xenotype Fequency: percentage chance of assigning a random xenotype to a randomly chosen baseliner faction (only applies if Biotech DLC is also installed)
+* % Xenotype Frequency: percentage chance of assigning a random xenotype to a randomly chosen baseliner faction (only applies if Biotech DLC is also installed)
 
 ## Integration With Other Mods
 Any mod that adds a new faction will automatically be detected by Random Factions and will randomly be added to the world when you use the random selection factions described above.
@@ -82,7 +82,7 @@ If [VFE Insectoids](https://steamcommunity.com/sharedfiles/filedetails/?id=21497
 ## Fun Things You Can Do With This Mod
 
 ### Furry World
-You can play on a rim world inhabited almost exclusively by anthropomorphic animal people. Just install the following mods, and then go to Options -> Mod Settings -> Random Factions and set "% Xenotype Fequency" to 100:
+You can play on a rim world inhabited almost exclusively by anthropomorphic animal people. Just install the following mods, and then go to Options -> Mod Settings -> Random Factions and set "% Xenotype Frequency" to 100:
 * [Random Factions](https://steamcommunity.com/sharedfiles/filedetails/?id=2896649114)
 * [Biotech Expanded Core](https://steamcommunity.com/sharedfiles/filedetails/?id=2884018485)
 * [Biotech Expansion - Mammalia](https://steamcommunity.com/sharedfiles/filedetails/?id=2878084431)

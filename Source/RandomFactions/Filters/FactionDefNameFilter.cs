@@ -1,22 +1,15 @@
 ﻿using System.Collections.Generic;
 using RimWorld;
 
-namespace RandomFactions.filters;
+namespace RandomFactions.Filters;
 
 public class FactionDefNameFilter : FactionDefFilter
 {
     private readonly bool include;
     private readonly HashSet<string> names;
 
-    public FactionDefNameFilter(params string[] names)
+    public FactionDefNameFilter(params string[] names) : this(true, names)
     {
-        this.names = [];
-        foreach (var n in names)
-        {
-            this.names.Add(n);
-        }
-
-        include = true;
     }
 
     public FactionDefNameFilter(bool include, params string[] names)

@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using RimWorld;
 
-namespace RandomFactions.filters;
+namespace RandomFactions.Filters;
 
 public class BackstoryTagFactionFilter(BackstoryCategoryFilter tag) : FactionFilter
 {
