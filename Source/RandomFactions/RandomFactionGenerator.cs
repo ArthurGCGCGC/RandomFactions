@@ -27,18 +27,17 @@ The licensor cannot revoke these freedoms as long as you follow the license term
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using HugsLib.Utils;
-using RandomFactions;
-using RandomFactions.filters;
+using RandomFactions.Filters;
 using RimWorld;
 using Verse;
+
+namespace RandomFactions;
 
 public class RandomFactionGenerator
 {
     private readonly List<FactionDef> definedFactionDefs;
 
     private readonly bool hasBiotech;
-    private readonly ModLogger modLogger;
     private readonly string[] modOffBooksFactionDefNames;
     private readonly int percentXeno;
     private readonly Random prng;
@@ -47,25 +46,22 @@ public class RandomFactionGenerator
 
     public RandomFactionGenerator(int percentXenoFaction, IEnumerable<FactionDef> allFactionDefs,
         string[] offBooksFactionDefNames, bool hasBiotechExpansion,
-        List<XenotypeDef> violenceCapableNonBaselineXenotypes, ModLogger logger)
+        List<XenotypeDef> violenceCapableNonBaselineXenotypes)
     {
         // init globals
-        modLogger = logger;
         percentXeno = percentXenoFaction;
         hasBiotech = hasBiotechExpansion;
         modOffBooksFactionDefNames = offBooksFactionDefNames;
-        var seeder = new Random(Find.World.ConstantRandSeed);
-        var seedBuffer = new byte[4];
-        seeder.NextBytes(seedBuffer);
-        var seed = BitConverter.ToInt32(seedBuffer, 0);
-        prng = new Random(seed);
+
+        prng = new Random(Find.World.ConstantRandSeed);
+
         this.violenceCapableNonBaselineXenotypes = violenceCapableNonBaselineXenotypes;
 
         // load existing faction definitions except the ones from this mod
         definedFactionDefs = allFactionDefs
             .Where(x => !x.categoryTag.EqualsIgnoreCase(RandomFactionsMod.RandomCategoryName)).ToList();
 
-        logger.Trace($"RandomFactionGenerator constructed with random number seed {Find.World.ConstantRandSeed}");
+        Log.Message($"[RandomFactions] RandomFactionGenerator constructed with random number seed {Find.World.ConstantRandSeed}");
     }
 
     private void ReplaceWithRandomFaction(Faction faction, bool allowDuplicates,
@@ -77,7 +73,7 @@ public class RandomFactionGenerator
         var newFaction = randomFactionSelector(existingFactions, allowDuplicates);
         if (newFaction == null)
         {
-            modLogger.Message($"Failed to generate a new faction to replace {faction}. Retaining the old faction.");
+            Log.Warning($"[RandomFactions] Failed to generate a new faction to replace {faction}. Retaining the old faction.");
             return;
         }
 
@@ -111,8 +107,8 @@ public class RandomFactionGenerator
 
     private void ReplaceFaction(Faction oldFaction, Faction newFaction)
     {
-        modLogger.Message(
-            $"Replacing faction {oldFaction.Name} ({oldFaction.def.defName}) with faction {newFaction.Name} ({newFaction.def.defName})");
+        Log.Message(
+            $"[RandomFactions] Replacing faction {oldFaction.Name} ({oldFaction.def.defName}) with faction {newFaction.Name} ({newFaction.def.defName})");
 
         foreach (var stl in Find.WorldObjects.Settlements.Where(stl => stl.Faction.Equals(oldFaction)))
         {
@@ -140,23 +136,34 @@ public class RandomFactionGenerator
             randomFactionDef = factionDefs[prng.Next(factionDefs.Count)];
 
             var count = GetFactionsOfTypeCount(randomFactionDef, existingFactions);
-            if (randomFactionDef.maxCountAtGameStart <= 0 || count < randomFactionDef.maxCountAtGameStart)
+            if (randomFactionDef.maxConfigurableAtWorldCreation <= 0 || count < randomFactionDef.maxConfigurableAtWorldCreation)
             {
                 break;
             }
         } while (--limit > 0);
 
-        var factionIsPatchable = RandomFactionsMod.IsFactionXenotypePatchable(randomFactionDef);
 
-        modLogger.Trace($"{randomFactionDef.defName} is patchable: {factionIsPatchable}.");
-
-        if (!hasBiotech || !factionIsPatchable || !Rand.Chance(percentXeno / 100f))
+        if (!hasBiotech)
         {
-            modLogger.Trace($"Skipping baseliner xenotype replacement for faction {randomFactionDef.defName}");
             return randomFactionDef;
         }
 
-        modLogger.Message($"Replacing baseliner xenotype for faction {randomFactionDef.defName}");
+        var factionIsPatchable = RandomFactionsMod.IsFactionXenotypePatchable(randomFactionDef);
+
+        Log.Message($"[RandomFactions] {randomFactionDef.defName} is patchable: {factionIsPatchable}.");
+
+        if (!factionIsPatchable)
+        {
+            return randomFactionDef;
+        }
+
+        if (!Rand.Chance(percentXeno / 100f))
+        {
+            Log.Message($"[RandomFactions] Skipping baseliner xenotype replacement for faction {randomFactionDef.defName}: roll missed target chance ({percentXeno}%).");
+            return randomFactionDef;
+        }
+
+        Log.Message($"[RandomFactions] Replacing baseliner xenotype for faction {randomFactionDef.defName}");
 
         var randomXenotypeDef = GetRandomNonBaselineXenotypeDef();
         var xenoFactionDefName = RandomFactionsMod.GetXenoFactionDefName(randomXenotypeDef, randomFactionDef);
@@ -168,8 +175,8 @@ public class RandomFactionGenerator
             return factionDef;
         }
 
-        modLogger.Warning(
-            $"Couldn't replace baseliner xenotype for faction {randomFactionDef.defName} using xenotype {randomXenotypeDef.defName}");
+        Log.Warning(
+            $"[RandomFactions] Couldn't replace baseliner xenotype for faction {randomFactionDef.defName} using xenotype {randomXenotypeDef.defName}");
         return randomFactionDef;
     }
 
@@ -183,15 +190,17 @@ public class RandomFactionGenerator
         return DefDatabase<FactionDef>.AllDefs.FirstOrDefault(def => name.Equals(def.defName));
     }
 
-    private Faction GetRandomNpcFaction(Faction[] existingFactions, bool allowDuplicates)
+    private Faction GetRandomFactionWithFilters(Faction[] existingFactions, bool allowDuplicates, params FactionDefFilter[] filters)
     {
         while (true)
         {
-            var filteredDefs = FactionDefFilter.FilterFactionDefs(definedFactionDefs, new PlayerFactionDefFilter(false),
-                new HiddenFactionDefFilter(false), new FactionDefNameFilter(false, modOffBooksFactionDefNames),
-                GetDuplicatesFilter(existingFactions, allowDuplicates));
+            var allFilters = new List<FactionDefFilter>(filters)
+            {
+                GetDuplicatesFilter(existingFactions, allowDuplicates)
+            };
 
-            // if there's already one of everything, allow duplicates again
+            var filteredDefs = FactionDefFilter.FilterFactionDefs(definedFactionDefs, allFilters);
+
             if (filteredDefs.Count == 0)
             {
                 if (allowDuplicates)
@@ -206,108 +215,56 @@ public class RandomFactionGenerator
             var randomFactionDef = GetRandomFactionDef(filteredDefs, existingFactions);
             return GenerateFactionFromDef(randomFactionDef, existingFactions);
         }
+    }
+
+    private Faction GetRandomNpcFaction(Faction[] existingFactions, bool allowDuplicates)
+    {
+        return GetRandomFactionWithFilters(existingFactions, allowDuplicates,
+            new PlayerFactionDefFilter(false),
+            new HiddenFactionDefFilter(false),
+            new FactionDefNameFilter(false, modOffBooksFactionDefNames)
+        );
     }
 
     private Faction GetRandomEnemyFaction(Faction[] existingFactions, bool allowDuplicates)
     {
-        while (true)
-        {
-            var filteredDefs = FactionDefFilter.FilterFactionDefs(definedFactionDefs, new PlayerFactionDefFilter(false),
-                new HiddenFactionDefFilter(false), new FactionDefNameFilter(false, modOffBooksFactionDefNames),
-                new PermanentEnemyFactionDefFilter(true), GetDuplicatesFilter(existingFactions, allowDuplicates));
-
-            // if there's already one of everything, allow duplicates again
-            if (filteredDefs.Count == 0)
-            {
-                if (allowDuplicates)
-                {
-                    return null;
-                }
-
-                allowDuplicates = true;
-                continue;
-            }
-
-            var randomFactionDef = GetRandomFactionDef(filteredDefs, existingFactions);
-            return GenerateFactionFromDef(randomFactionDef, existingFactions);
-        }
+        return GetRandomFactionWithFilters(existingFactions, allowDuplicates,
+            new PlayerFactionDefFilter(false),
+            new HiddenFactionDefFilter(false),
+            new FactionDefNameFilter(false, modOffBooksFactionDefNames),
+            new PermanentEnemyFactionDefFilter(true)
+        );
     }
 
     private Faction GetRandomRoughFaction(Faction[] existingFactions, bool allowDuplicates)
     {
-        while (true)
-        {
-            var filteredDefs = FactionDefFilter.FilterFactionDefs(definedFactionDefs, new PlayerFactionDefFilter(false),
-                new HiddenFactionDefFilter(false), new FactionDefNameFilter(false, modOffBooksFactionDefNames),
-                new PermanentEnemyFactionDefFilter(false), new NaturalEnemyFactionDefFilter(true),
-                GetDuplicatesFilter(existingFactions, allowDuplicates));
-
-            // if there's already one of everything, allow duplicates again
-            if (filteredDefs.Count == 0)
-            {
-                if (allowDuplicates)
-                {
-                    return null;
-                }
-
-                allowDuplicates = true;
-                continue;
-            }
-
-            var randomFactionDef = GetRandomFactionDef(filteredDefs, existingFactions);
-            return GenerateFactionFromDef(randomFactionDef, existingFactions);
-        }
+        return GetRandomFactionWithFilters(existingFactions, allowDuplicates,
+            new PlayerFactionDefFilter(false),
+            new HiddenFactionDefFilter(false),
+            new FactionDefNameFilter(false, modOffBooksFactionDefNames),
+            new PermanentEnemyFactionDefFilter(false),
+            new NaturalEnemyFactionDefFilter(true)
+        );
     }
 
     private Faction GetRandomNeutralFaction(Faction[] existingFactions, bool allowDuplicates)
     {
-        while (true)
-        {
-            var filteredDefs = FactionDefFilter.FilterFactionDefs(definedFactionDefs, new PlayerFactionDefFilter(false),
-                new HiddenFactionDefFilter(false), new FactionDefNameFilter(false, modOffBooksFactionDefNames),
-                new PermanentEnemyFactionDefFilter(false), new NaturalEnemyFactionDefFilter(false),
-                GetDuplicatesFilter(existingFactions, allowDuplicates));
-
-            // if there's already one of everything, allow duplicates again
-            if (filteredDefs.Count == 0)
-            {
-                if (allowDuplicates)
-                {
-                    return null;
-                }
-
-                allowDuplicates = true;
-                continue;
-            }
-
-            var randomFactionDef = GetRandomFactionDef(filteredDefs, existingFactions);
-            return GenerateFactionFromDef(randomFactionDef, existingFactions);
-        }
+        return GetRandomFactionWithFilters(existingFactions, allowDuplicates,
+            new PlayerFactionDefFilter(false),
+            new HiddenFactionDefFilter(false),
+            new FactionDefNameFilter(false, modOffBooksFactionDefNames),
+            new PermanentEnemyFactionDefFilter(false),
+            new NaturalEnemyFactionDefFilter(false)
+        );
     }
 
     private Faction GetRandomNamedFaction(Faction[] existingFactions, bool allowDuplicates, params string[] nameList)
     {
-        while (true)
-        {
-            var filteredDefs = FactionDefFilter.FilterFactionDefs(definedFactionDefs, new PlayerFactionDefFilter(false),
-                new FactionDefNameFilter(false, modOffBooksFactionDefNames), new FactionDefNameFilter(nameList),
-                GetDuplicatesFilter(existingFactions, allowDuplicates));
-
-            // if there's already one of everything, allow duplicates again
-            if (filteredDefs.Count == 0)
-            {
-                if (allowDuplicates)
-                {
-                    return null;
-                }
-
-                allowDuplicates = true;
-                continue;
-            }
-
-            var randomFactionDef = GetRandomFactionDef(filteredDefs, existingFactions);
-            return GenerateFactionFromDef(randomFactionDef, existingFactions);
-        }
+        return GetRandomFactionWithFilters(existingFactions, allowDuplicates,
+            new PlayerFactionDefFilter(false),
+            new FactionDefNameFilter(false, modOffBooksFactionDefNames),
+            new FactionDefNameFilter(nameList)
+        );
     }
 
     private Faction GenerateFactionFromDef(FactionDef def, Faction[] existingFactions)
@@ -320,8 +277,8 @@ public class RandomFactionGenerator
         }
         catch (Exception ex)
         {
-            modLogger.Error(
-                $"Couldn't generate faction with relations from def {def.defName}. Exception: {ex.Message}.");
+            Log.Error(
+                $"[RandomFactions] Couldn't generate faction with relations from def {def.defName}. Exception: {ex.Message}.");
             return null;
         }
     }

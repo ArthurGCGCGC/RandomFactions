@@ -28,12 +28,14 @@ using System.Collections.Generic;
 using System.Linq;
 using RimWorld;
 
+namespace RandomFactions.Filters;
+
 public abstract class FactionDefFilter
 {
     protected abstract bool Matches(FactionDef f);
 
     public static List<FactionDef> FilterFactionDefs(IEnumerable<FactionDef> allFactionDefs,
-        params FactionDefFilter[] filters)
+        List<FactionDefFilter> filters)
     {
         var output = new List<FactionDef>();
         foreach (var fac in allFactionDefs)

@@ -1,6 +1,6 @@
 ﻿using RimWorld;
 
-namespace RandomFactions.filters;
+namespace RandomFactions.Filters;
 
 public class AllowedTemperatureFactionDefFilter(float temperature) : FactionDefFilter
 {

@@ -1,7 +1,7 @@
 ﻿using RimWorld;
 using Verse;
 
-namespace RandomFactions.filters;
+namespace RandomFactions.Filters;
 
 public class CategoryTagFactionFilter(string tag) : FactionFilter
 {

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using RimWorld;
 
-namespace RandomFactions.filters;
+namespace RandomFactions.Filters;
 
 public class FactionDefNameFilter : FactionDefFilter
 {
