@@ -29,6 +29,12 @@ public class RandomFactionsMod : Mod
         "TradersGuild"
     };
 
+    private static readonly HashSet<string> ignoredXenotypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "AG_RandomCustom",
+        "PSRX_RandomXenotype"
+    };
+
     internal static readonly Dictionary<string, FactionDef> PatchedXenotypeFactions = new();
     private static readonly Dictionary<FactionDef, int> randCountRecord = new();
     private static readonly Dictionary<FactionDef, int> zeroCountRecord = new();
@@ -192,25 +198,19 @@ public class RandomFactionsMod : Mod
     {
         return DefDatabase<XenotypeDef>.AllDefs.Where(x =>
         {
+            if (ignoredXenotypes.Contains(x.defName))
+            {
+                return false;
+            }
+
             //To prevent replacing baseliners with baseliners
             if (x == XenotypeDefOf.Baseliner)
             {
                 return false;
             }
 
-            if (x.genes == null)
-            {
-                return true;
-            }
-
-            var combinedDisabled = WorkTags.None;
-            foreach (var gene in x.genes)
-            {
-                combinedDisabled |= gene.disabledWorkTags;
-            }
-
             // Keep only xenotypes that do NOT disable violent work, otherwise their generation will throw an exception since you can't have faction leaders incapable of violence!
-            return (combinedDisabled & WorkTags.Violent) == 0;
+            return x.genes == null || x.genes.All(gene => !gene.disabledWorkTags.HasFlag(WorkTags.Violent));
         }).ToList();
     }
 
