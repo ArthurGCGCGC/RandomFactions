@@ -28,6 +28,19 @@ public class RandomFactionsMod : Mod
         "Salvagers",
         "TradersGuild"
     };
+    
+    private static readonly HashSet<string> patcheableFactionsWhitelist = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "TribeCannibal",
+        "NudistTribe",
+        "CannibalPirate",
+        "OutlanderCivil",
+        "OutlanderRough",
+        "TribeCivil",
+        "TribeRough",
+        "TribeSavage",
+        "Pirate"
+    };
 
     private static readonly HashSet<string> ignoredXenotypes = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -141,8 +154,8 @@ public class RandomFactionsMod : Mod
 
     public static bool IsFactionXenotypePatchable(FactionDef def)
     {
-        return !(def.isPlayer || def.hidden || def.maxConfigurableAtWorldCreation <= 1
-                 || RandomCategoryName.EqualsIgnoreCase(def.categoryTag) || def.BaselinerChance < 1);
+        return patcheableFactionsWhitelist.Contains(def.defName) || !(def.isPlayer || def.hidden || def.maxConfigurableAtWorldCreation <= 1
+                                             || RandomCategoryName.EqualsIgnoreCase(def.categoryTag) || def.BaselinerChance < 1);
     }
 
     public static string GetXenoFactionDefName(XenotypeDef xdef, FactionDef fdef)
