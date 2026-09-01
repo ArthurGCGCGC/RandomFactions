@@ -193,7 +193,7 @@ public class RandomFactionsMod : Mod
 
     public static string GetXenoFactionDefName(XenotypeDef xdef, FactionDef fdef)
     {
-        return $"{xdef.defName}{fdef.defName}";
+        return $"{xdef.defName}_RF_{fdef.defName}";
     }
 
     private static void CreateXenoFactions()

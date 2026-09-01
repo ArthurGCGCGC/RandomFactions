@@ -167,7 +167,7 @@ public class RandomFactionGenerator
             return randomFactionDef;
         }
 
-        Log.Message($"[RandomFactions] Replacing baseliner xenotype for faction {randomFactionDef.defName}");
+        Log.Message($"[RandomFactions] Replacing xenotype for faction {randomFactionDef.defName}");
 
         var randomXenotypeDef = GetRandomNonBaselineXenotypeDef();
         var xenoFactionDefName = RandomFactionsMod.GetXenoFactionDefName(randomXenotypeDef, randomFactionDef);
@@ -180,7 +180,7 @@ public class RandomFactionGenerator
         }
 
         Log.Warning(
-            $"[RandomFactions] Couldn't replace baseliner xenotype for faction {randomFactionDef.defName} using xenotype {randomXenotypeDef.defName}");
+            $"[RandomFactions] Couldn't replace xenotype for faction {randomFactionDef.defName} using xenotype {randomXenotypeDef.defName}");
         return randomFactionDef;
     }
 
