@@ -35,31 +35,34 @@ namespace RandomFactions;
 
 public class RandomFactionGenerator
 {
-    private readonly List<FactionDef> definedFactionDefs;
+    private readonly List<FactionDef> _definedFactionDefs;
 
-    private readonly bool hasBiotech;
-    private readonly string[] modOffBooksFactionDefNames;
-    private readonly int percentXeno;
-    private readonly Random prng;
+    private readonly bool _hasBiotech;
+    private readonly string[] _modOffBooksFactionDefNames;
+    private readonly int _percentXeno;
+    private readonly Random _prng;
 
-    private readonly List<XenotypeDef> violenceCapableNonBaselineXenotypes;
+    private readonly List<XenotypeDef> _violenceCapableNonBaselineXenotypes;
+    private readonly Faction[] _nonBlacklistedFactions;
 
     public RandomFactionGenerator(int percentXenoFaction, IEnumerable<FactionDef> allFactionDefs,
         string[] offBooksFactionDefNames, bool hasBiotechExpansion,
-        List<XenotypeDef> violenceCapableNonBaselineXenotypes)
+        List<XenotypeDef> violenceCapableNonBaselineXenotypes,
+        HashSet<string> blacklistedFactions)
     {
         // init globals
-        percentXeno = percentXenoFaction;
-        hasBiotech = hasBiotechExpansion;
-        modOffBooksFactionDefNames = offBooksFactionDefNames;
+        _percentXeno = percentXenoFaction;
+        _hasBiotech = hasBiotechExpansion;
+        _modOffBooksFactionDefNames = offBooksFactionDefNames;
+         _nonBlacklistedFactions = Find.World.factionManager.AllFactions.Where(f => !blacklistedFactions.Contains(f.def.defName)).ToArray();
 
-        prng = new Random(Find.World.ConstantRandSeed);
+        _prng = new Random(Find.World.ConstantRandSeed);
 
-        this.violenceCapableNonBaselineXenotypes = violenceCapableNonBaselineXenotypes;
+        this._violenceCapableNonBaselineXenotypes = violenceCapableNonBaselineXenotypes;
 
         // load existing faction definitions except the ones from this mod
-        definedFactionDefs = allFactionDefs
-            .Where(x => !x.categoryTag.EqualsIgnoreCase(RandomFactionsMod.RandomCategoryName)).ToList();
+        _definedFactionDefs = allFactionDefs
+            .Where(x => !x.categoryTag.EqualsIgnoreCase(RandomFactionsMod.RandomCategoryName) && !blacklistedFactions.Contains(x.defName)).ToList();
 
         Log.Message($"[RandomFactions] RandomFactionGenerator constructed with random number seed {Find.World.ConstantRandSeed}");
     }
@@ -67,10 +70,7 @@ public class RandomFactionGenerator
     private void ReplaceWithRandomFaction(Faction faction, bool allowDuplicates,
         Func<Faction[], bool, Faction> randomFactionSelector)
     {
-        var priorFactions = Find.World.factionManager.AllFactions;
-        var existingFactions = priorFactions as Faction[] ?? priorFactions.ToArray();
-
-        var newFaction = randomFactionSelector(existingFactions, allowDuplicates);
+        var newFaction = randomFactionSelector(_nonBlacklistedFactions, allowDuplicates);
         if (newFaction == null)
         {
             Log.Warning($"[RandomFactions] Failed to generate a new faction to replace {faction}. Retaining the old faction.");
@@ -133,7 +133,7 @@ public class RandomFactionGenerator
 
         do
         {
-            randomFactionDef = factionDefs[prng.Next(factionDefs.Count)];
+            randomFactionDef = factionDefs[_prng.Next(factionDefs.Count)];
 
             var count = GetFactionsOfTypeCount(randomFactionDef, existingFactions);
             if (randomFactionDef.maxConfigurableAtWorldCreation <= 0 || count < randomFactionDef.maxConfigurableAtWorldCreation)
@@ -143,23 +143,27 @@ public class RandomFactionGenerator
         } while (--limit > 0);
 
 
-        if (!hasBiotech)
+        if (!_hasBiotech)
         {
             return randomFactionDef;
         }
 
-        var factionIsPatchable = RandomFactionsMod.IsFactionXenotypePatchable(randomFactionDef);
+        var notPatchableReason = RandomFactionsMod.IsFactionXenotypePatchable(randomFactionDef);
+        var isPatchable = notPatchableReason == RandomFactionsMod.XenotypeNotPatchableReason.None;
 
-        Log.Message($"[RandomFactions] {randomFactionDef.defName} is patchable: {factionIsPatchable}.");
+        Log.Message(
+            $"[RandomFactions] {randomFactionDef.defName} is patchable: {(isPatchable ? "<color=green>True</color>" : "<color=red>False</color>")}" +
+            (isPatchable ? string.Empty : $" ({notPatchableReason})")
+        );
 
-        if (!factionIsPatchable)
+        if (!isPatchable)
         {
             return randomFactionDef;
         }
 
-        if (!Rand.Chance(percentXeno / 100f))
+        if (!Rand.Chance(_percentXeno / 100f))
         {
-            Log.Message($"[RandomFactions] Skipping baseliner xenotype replacement for faction {randomFactionDef.defName}: roll missed target chance ({percentXeno}%).");
+            Log.Message($"[RandomFactions] Skipping baseliner xenotype replacement for faction {randomFactionDef.defName}: roll missed target chance ({_percentXeno}%).");
             return randomFactionDef;
         }
 
@@ -182,7 +186,7 @@ public class RandomFactionGenerator
 
     private XenotypeDef GetRandomNonBaselineXenotypeDef()
     {
-        return violenceCapableNonBaselineXenotypes[prng.Next(violenceCapableNonBaselineXenotypes.Count)];
+        return _violenceCapableNonBaselineXenotypes[_prng.Next(_violenceCapableNonBaselineXenotypes.Count)];
     }
 
     private static FactionDef FindFactionDefByName(string name)
@@ -199,7 +203,7 @@ public class RandomFactionGenerator
                 GetDuplicatesFilter(existingFactions, allowDuplicates)
             };
 
-            var filteredDefs = FactionDefFilter.FilterFactionDefs(definedFactionDefs, allFilters);
+            var filteredDefs = FactionDefFilter.FilterFactionDefs(_definedFactionDefs, allFilters);
 
             if (filteredDefs.Count == 0)
             {
@@ -222,7 +226,7 @@ public class RandomFactionGenerator
         return GetRandomFactionWithFilters(existingFactions, allowDuplicates,
             new PlayerFactionDefFilter(false),
             new HiddenFactionDefFilter(false),
-            new FactionDefNameFilter(false, modOffBooksFactionDefNames)
+            new FactionDefNameFilter(false, _modOffBooksFactionDefNames)
         );
     }
 
@@ -231,7 +235,7 @@ public class RandomFactionGenerator
         return GetRandomFactionWithFilters(existingFactions, allowDuplicates,
             new PlayerFactionDefFilter(false),
             new HiddenFactionDefFilter(false),
-            new FactionDefNameFilter(false, modOffBooksFactionDefNames),
+            new FactionDefNameFilter(false, _modOffBooksFactionDefNames),
             new PermanentEnemyFactionDefFilter(true)
         );
     }
@@ -241,7 +245,7 @@ public class RandomFactionGenerator
         return GetRandomFactionWithFilters(existingFactions, allowDuplicates,
             new PlayerFactionDefFilter(false),
             new HiddenFactionDefFilter(false),
-            new FactionDefNameFilter(false, modOffBooksFactionDefNames),
+            new FactionDefNameFilter(false, _modOffBooksFactionDefNames),
             new PermanentEnemyFactionDefFilter(false),
             new NaturalEnemyFactionDefFilter(true)
         );
@@ -252,7 +256,7 @@ public class RandomFactionGenerator
         return GetRandomFactionWithFilters(existingFactions, allowDuplicates,
             new PlayerFactionDefFilter(false),
             new HiddenFactionDefFilter(false),
-            new FactionDefNameFilter(false, modOffBooksFactionDefNames),
+            new FactionDefNameFilter(false, _modOffBooksFactionDefNames),
             new PermanentEnemyFactionDefFilter(false),
             new NaturalEnemyFactionDefFilter(false)
         );
@@ -262,7 +266,7 @@ public class RandomFactionGenerator
     {
         return GetRandomFactionWithFilters(existingFactions, allowDuplicates,
             new PlayerFactionDefFilter(false),
-            new FactionDefNameFilter(false, modOffBooksFactionDefNames),
+            new FactionDefNameFilter(false, _modOffBooksFactionDefNames),
             new FactionDefNameFilter(nameList)
         );
     }

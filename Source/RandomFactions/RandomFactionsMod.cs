@@ -28,7 +28,7 @@ public class RandomFactionsMod : Mod
         "Salvagers",
         "TradersGuild"
     };
-    
+
     private static readonly HashSet<string> patcheableFactionsWhitelist = new(StringComparer.OrdinalIgnoreCase)
     {
         "TribeCannibal",
@@ -41,7 +41,7 @@ public class RandomFactionsMod : Mod
         "TribeSavage",
         "Pirate"
     };
-
+    
     private static readonly HashSet<string> ignoredXenotypes = new(StringComparer.OrdinalIgnoreCase)
     {
         "AG_RandomCustom",
@@ -143,6 +143,9 @@ public class RandomFactionsMod : Mod
 
         listing.CheckboxLabeled("RaFa.allowDuplicates".Translate(), ref Settings.allowDuplicates, "RaFa.allowDuplicatesTT".Translate());
 
+        listing.Label($"{"RaFa.factionBlacklist".Translate()}");
+        Settings._factionBlacklist=  listing.TextEntry( Settings._factionBlacklist);
+        
         listing.End();
         base.DoSettingsWindowContents(inRect);
     }
@@ -152,10 +155,40 @@ public class RandomFactionsMod : Mod
         HideXenoPatches(GenScene.InEntryScene);
     }
 
-    public static bool IsFactionXenotypePatchable(FactionDef def)
+
+    public static XenotypeNotPatchableReason IsFactionXenotypePatchable(FactionDef def)
     {
-        return patcheableFactionsWhitelist.Contains(def.defName) || !(def.isPlayer || def.hidden || def.maxConfigurableAtWorldCreation <= 1
-                                             || RandomCategoryName.EqualsIgnoreCase(def.categoryTag) || def.BaselinerChance < 1);
+        if (patcheableFactionsWhitelist.Contains(def.defName))
+        {
+            return XenotypeNotPatchableReason.None;
+        }
+
+        if (def.maxConfigurableAtWorldCreation <= 1)
+        {
+            return XenotypeNotPatchableReason.OneOrFewerMaxConfigurableAtWorldCreation;
+        }
+
+        if (def.isPlayer)
+        {
+            return XenotypeNotPatchableReason.IsPlayer;
+        }
+
+        if (def.hidden)
+        {
+            return XenotypeNotPatchableReason.IsHidden;
+        }
+
+        if (RandomCategoryName.EqualsIgnoreCase(def.categoryTag))
+        {
+            return XenotypeNotPatchableReason.IsRandomCategory;
+        }
+
+        if (def.BaselinerChance < 1)
+        {
+            return XenotypeNotPatchableReason.NotBaseliner;
+        }
+        
+        return XenotypeNotPatchableReason.None;
     }
 
     public static string GetXenoFactionDefName(XenotypeDef xdef, FactionDef fdef)
@@ -169,7 +202,7 @@ public class RandomFactionsMod : Mod
 
         foreach (var def in DefDatabase<FactionDef>.AllDefs)
         {
-            if (!IsFactionXenotypePatchable(def))
+            if (IsFactionXenotypePatchable(def) != XenotypeNotPatchableReason.None)
             {
                 continue;
             }
@@ -297,5 +330,15 @@ public class RandomFactionsMod : Mod
                 def.hidden = hide;
             }
         }
+    }
+
+    public enum XenotypeNotPatchableReason
+    {
+        None,
+        IsPlayer,
+        IsHidden,
+        IsRandomCategory,
+        NotBaseliner,
+        OneOrFewerMaxConfigurableAtWorldCreation
     }
 }
