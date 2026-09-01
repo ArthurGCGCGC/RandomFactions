@@ -45,7 +45,8 @@ public class Main : GameComponent
             DefDatabase<FactionDef>.AllDefs,
             ignoreList.ToArray(),
             hasBiotech,
-            RandomFactionsMod.ViolenceCapableNonBaselineXenotypes.Value
+            RandomFactionsMod.ViolenceCapableNonBaselineXenotypes.Value,
+            RandomFactionsMod.Settings.FactionBlacklist
         );
 
         var factionReplacementList = Find.FactionManager.AllFactions.Where(faction =>
